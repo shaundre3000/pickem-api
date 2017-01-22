@@ -2,6 +2,8 @@ import pandas as pd
 import sqlalchemy
 from sqlalchemy import create_engine, event
 import db
+import json
+import numpy
 
 
 def init_search_path(connection, conn_record):
@@ -54,33 +56,63 @@ def calc_counts(picks_df):
     return picks_df
 
 
-def get_data_dfs(picks_df, data_cut):
+class MyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, numpy.integer):
+            return int(obj)
+        elif isinstance(obj, numpy.floating):
+            return float(obj)
+        elif isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+        else:
+            return super(MyEncoder, self).default(obj)
 
-    count = '{}_team_count'.format(data_cut)
-    wins = '{}_team_wins'.format(data_cut)
-    win_pct = '{}_win_pct'.format(data_cut)
 
-    if data_cut == 'season':
-        cols = ['team', count, wins]
-    elif data_cut == 'weekly':
-        cols = ['team', 'week', count, 'win_loss']
+def nested_json(df, head):
+
+    output = {}
+    if head == 'team':
+        index = 'week'
+    elif head == 'user':
+        index = 'team'
+    elif df.name == 'user':
+        index = 'user'
     else:
-        cols = ['user', 'team', count, wins]
+        index = 'team'
+
+    for name, group in df.groupby(head):
+        group = group.set_index(index)
+        group.index = group.index.astype(str)
+        group.pop(head)
+        output[name] = group.to_dict()
+
+    return json.dumps(output, ensure_ascii=False, cls=MyEncoder)
+
+
+def get_data_dfs(data_cut, head="team"):
+
+    picks_df = get_picks(build_engine())
+    picks_df = calc_counts(picks_df)
+
+    count = "{}_team_count".format(data_cut)
+    wins = "{}_team_wins".format(data_cut)
+    win_pct = "{}_win_pct".format(data_cut)
+
+    if data_cut == "season":
+        cols = ["team", count, wins]
+    elif data_cut == "weekly":
+        cols = ["team", "week", count, "win_loss"]
+    else:
+        cols = ["user", "team", count, wins]
 
     df = picks_df[cols].drop_duplicates()
+    df.name = data_cut
 
-    if data_cut != 'weekly':
+    if data_cut != "weekly":
         df[win_pct] = df[wins] / df[count]
-        return df.sort_values([count, win_pct], ascending=False)
+
+    if data_cut == "season":
+        df = df.sort_values([count, win_pct], ascending=False).set_index('team')
+        return df.set_index('team').to_json()
     else:
-        return df.sort_values([count, 'win_loss'], ascending=False)
-
-
-def main():
-
-    engine = build_engine()
-    picks_df = get_picks(engine)
-    picks_df = calc_counts(picks_df)
-    season_team_df = get_data_dfs(picks_df, 'season')
-    weekly_team_df = get_data_dfs(picks_df, 'weekly')
-    user_team_df = get_data_dfs(picks_df, 'user')
+        return nested_json(df, head)
