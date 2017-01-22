@@ -72,7 +72,7 @@ def nested_json(df, head):
 
     output = {}
     if head == 'team':
-        index = 'week'
+        index = 'team'
     elif head == 'user':
         index = 'team'
     elif df.name == 'user':
@@ -113,6 +113,6 @@ def get_data_dfs(data_cut, head="team"):
 
     if data_cut == "season":
         df = df.sort_values([count, win_pct], ascending=False).set_index('team')
-        return df.set_index('team').to_json()
+        return df.to_json()
     else:
         return nested_json(df, head)
