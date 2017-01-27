@@ -1,1 +1,1 @@
-web: gunicorn -b 0.0.0.0:$PORT app:api --log-level=DEBUG --worker-class=geven
+web: gunicorn api --log-file -
