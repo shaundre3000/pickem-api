@@ -1,6 +1,5 @@
 import falcon
 import picks_analytics
-from auth import AuthMiddleware
 
 
 # middleware=[AuthMiddleware()]
