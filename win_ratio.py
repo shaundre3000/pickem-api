@@ -1,10 +1,9 @@
 import pandas as pd
 import sqlalchemy
 from sqlalchemy import create_engine, event
-import db
 import json
 import numpy
-
+import os
 
 def init_search_path(connection, conn_record):
     cursor = connection.cursor()
@@ -16,7 +15,7 @@ def init_search_path(connection, conn_record):
 
 def build_engine():
 
-    engine = create_engine(db.get_aws_cred())
+    engine = create_engine(os.environ['AWS_ENGINE'])
     event.listen(engine, 'connect', init_search_path)
 
     meta = sqlalchemy.MetaData(engine, schema='schema')
