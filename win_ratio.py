@@ -15,7 +15,7 @@ def init_search_path(connection, conn_record):
 
 def build_engine():
 
-    engine = create_engine(os.environ['AWS_ENGINE'])
+    engine = create_engine(os.environ['AWS_KEY'])
     event.listen(engine, 'connect', init_search_path)
 
     meta = sqlalchemy.MetaData(engine, schema='schema')
