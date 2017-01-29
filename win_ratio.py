@@ -24,7 +24,7 @@ def get_picks(engine):
 
         u.name as user,
         p.game_id,
-        t.name as team,
+        t.id as team,
         p.week,
         p.result
 
