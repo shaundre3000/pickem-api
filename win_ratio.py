@@ -71,7 +71,7 @@ def nested_json(df, head):
             group.pop(head)
         except KeyError:
             pass
-        output[name] = group.to_dict()
+        output[str(name)] = group.to_dict()
 
     return json.dumps(output, ensure_ascii=False, cls=MyEncoder)
 
