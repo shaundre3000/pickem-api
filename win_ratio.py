@@ -22,7 +22,7 @@ def get_picks(engine):
     picks_q = """
     SELECT
 
-        u.name as user,
+        u.id as user,
         p.game_id,
         t.id as team,
         p.week,
