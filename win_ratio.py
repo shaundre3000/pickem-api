@@ -1,27 +1,20 @@
 import pandas as pd
-import sqlalchemy
-from sqlalchemy import create_engine, event
+from connection import AWSEngine
 import json
 import numpy
 import os
 
-def init_search_path(connection, conn_record):
-    cursor = connection.cursor()
-    try:
-        cursor.execute('SET search_path TO new_db_schema;')
-    finally:
-        cursor.close()
 
-
-def build_engine():
-
-    engine = create_engine(os.environ['AWS_KEY'])
-    event.listen(engine, 'connect', init_search_path)
-
-    meta = sqlalchemy.MetaData(engine, schema='schema')
-    meta.reflect(engine, schema='schema')
-
-    return engine
+class MyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, numpy.integer):
+            return int(obj)
+        elif isinstance(obj, numpy.floating):
+            return float(obj)
+        elif isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+        else:
+            return super(MyEncoder, self).default(obj)
 
 
 def get_picks(engine):
@@ -55,34 +48,29 @@ def calc_counts(picks_df):
     return picks_df
 
 
-class MyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, numpy.integer):
-            return int(obj)
-        elif isinstance(obj, numpy.floating):
-            return float(obj)
-        elif isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-        else:
-            return super(MyEncoder, self).default(obj)
+class IncorrectCut(Exception):
+    pass
 
 
 def nested_json(df, head):
 
     output = {}
-    if head == 'team':
-        index = 'team'
-    elif head == 'user':
+    if df.name == 'weekly':
+        index = 'week'
+    elif head == 'team':
         index = 'team'
     elif df.name == 'user':
         index = 'user'
     else:
-        index = 'team'
+        raise IncorrectCut('Wrong combination of data cut and header')
 
     for name, group in df.groupby(head):
         group = group.set_index(index)
         group.index = group.index.astype(str)
-        group.pop(head)
+        try:
+            group.pop(head)
+        except KeyError:
+            pass
         output[name] = group.to_dict()
 
     return json.dumps(output, ensure_ascii=False, cls=MyEncoder)
@@ -90,7 +78,8 @@ def nested_json(df, head):
 
 def get_data_dfs(data_cut, head="team"):
 
-    picks_df = get_picks(build_engine())
+    engine = AWSEngine()
+    picks_df = get_picks(engine.engine_str)
     picks_df = calc_counts(picks_df)
 
     count = "{}_team_count".format(data_cut)
