@@ -1,7 +1,7 @@
 import sqlalchemy
 from sqlalchemy import create_engine, event
 import os
-import db
+# import db
 
 
 class AWSEngine:
