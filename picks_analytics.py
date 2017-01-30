@@ -23,3 +23,9 @@ class WeeklyRecDistr(object):
         resp.body = weekly_review.week_rec_distr(week)
         resp.status = falcon.HTTP_200
 
+
+class UserWeeklyRecords(object):
+
+    def on_get(self, req, resp, week):
+        resp.body = weekly_review.user_weekly_record(week)
+        resp.status = falcon.HTTP_200
