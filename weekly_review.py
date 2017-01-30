@@ -83,35 +83,48 @@ def weekly_league_record(week):
         return weekly_league_record[weekly_league_record['Week'] == week].dropna().to_json()
 
 
-def user_weekly_record(week):
+def user_weekly_record(week, distr=False):
 
     picks_df = get_picks_data()
 
     outcome_cols = ['win', 'loss', 'push']
+    for col in outcome_cols:
+        picks_df[col] = picks_df['result'].apply(lambda result: 1 if result == col else 0)
+        picks_df['weekly_{}'.format(col)] = picks_df.groupby('week')[col].transform(sum)
+        picks_df['user_{}'.format(col)] = picks_df.groupby(['user', 'week'])[col].transform(sum)
     user_weekly_record = picks_df[['user', 'week'] + ['user_{}'.format(col) for col in outcome_cols]].drop_duplicates()
     rec_format = lambda row: '{}-{}-{}'.format(row['user_win'], row['user_loss'], row['user_push'])
     user_weekly_record['weekly_record'] = user_weekly_record.apply(rec_format, axis=1)
     user_weekly_record['weekly_points'] = user_weekly_record['user_win'] + (user_weekly_record['user_push'] * .5)
     user_weekly_record = user_weekly_record[['user', 'week', 'weekly_record', 'weekly_points']]
     user_weekly_record['record_count'] = user_weekly_record.groupby(['weekly_record', 'week'])['user'].transform('count')
-    current_week = user_weekly_record[user_weekly_record['week'] == 16].drop('record_count', axis=1).sort_values('weekly_points', ascending=False)
-    current_week.drop('week', axis=1, inplace=True)
-    current_week.columns = ['Name', 'Record', 'Points']
 
-    return current_week
+    if distr is True:
+        return user_weekly_record
+    else:
+        if week == 'all':
+            return user_weekly_record.set_index('User_ID').to_json()
+        else:
+            current_week = user_weekly_record[user_weekly_record['week'] == week].drop('record_count', axis=1)\
+                .sort_values('weekly_points', ascending=False)
+            current_week.drop('week', axis=1, inplace=True)
+            current_week.columns = ['User_ID', 'Record', 'Points']
+            return current_week.set_index('User_ID').to_json()
 
 
 def week_rec_distr(week):
 
-    current_week = user_weekly_record(week)
+    current_week = user_weekly_record(week, distr=True)
 
     current_week_rec_dist = current_week[['week', 'weekly_record', 'record_count', 'weekly_points']]\
         .drop_duplicates().sort_values('weekly_points', ascending=False)
-    current_week_rec_dist = current_week_rec_dist[current_week_rec_dist['week'] == 16]
-    current_week_rec_dist.drop('week', axis=1, inplace=True)
+    current_week_rec_dist.set_index('week', inplace=True)
     current_week_rec_dist.columns = ['Record', 'Count', 'Points']
 
-    return current_week_rec_dist
+    if week == 'all':
+        return current_week_rec_dist.to_json()
+    else:
+        return current_week_rec_dist[current_week_rec_dist['week'] == week].to_json()
 
 
 def weekly_email(week):
