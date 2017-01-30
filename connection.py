@@ -1,7 +1,7 @@
 import sqlalchemy
 from sqlalchemy import create_engine, event
 import os
-import db
+# import db
 
 
 class AWSEngine:
@@ -18,8 +18,8 @@ class AWSEngine:
             cursor.close()
 
     def build_engine(self):
-        # os.environ['AWS_KEY']
-        engine = create_engine(db.get_aws_cred())
+        # db.get_aws_cred()
+        engine = create_engine(os.environ['AWS_KEY'])
         event.listen(engine, 'connect', self.init_search_path)
 
         meta = sqlalchemy.MetaData(engine, schema='schema')
